@@ -162,8 +162,12 @@ export default class MaximizeToEmptyWorkspaceExtension extends Extension {
         // Switch view to home workspace
         manager.get_workspace_by_index(0).activate(global.get_current_time());
 
-        // Clean up the now-empty workspace
-        if (this._settings.get_boolean('cleanup-empty-workspace')) {
+        // Clean up the now-empty workspace.
+        // With dynamic workspaces GNOME already removes empty workspaces by itself; removing it here too
+        // raced with GNOME (and with the desktop icons window) and crashed gnome-shell in
+        // meta_workspace_remove -> assert_workspace_empty. So only do it with a fixed number of workspaces.
+        const dynamicWorkspaces = new Gio.Settings({schema_id: 'org.gnome.mutter'}).get_boolean('dynamic-workspaces');
+        if (!dynamicWorkspaces && this._settings.get_boolean('cleanup-empty-workspace')) {
             // Exclude the window we just moved
             const remaining = oldWorkspace.list_windows().filter(
                 w => w !== win && !w.is_always_on_all_workspaces() && !isDesktopIconsWindow(w)

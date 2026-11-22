@@ -35,7 +35,7 @@ export default class MaximizeToEmptyWorkspacePreferences extends ExtensionPrefer
         // Cleanup empty workspace toggle
         const cleanupRow = new Adw.ActionRow({
             title: _('Clean up empty workspaces'),
-            subtitle: _('Automatically remove empty workspaces after moving windows back'),
+            subtitle: _('Only with a fixed number of workspaces; with dynamic workspaces GNOME removes them itself'),
         });
         const cleanupToggle = new Gtk.Switch({
             valign: Gtk.Align.CENTER,

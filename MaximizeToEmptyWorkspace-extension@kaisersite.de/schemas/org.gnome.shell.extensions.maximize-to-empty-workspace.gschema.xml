@@ -10,7 +10,7 @@
     <key type="b" name="cleanup-empty-workspace">
       <default>true</default>
       <summary>Clean up empty workspaces</summary>
-      <description>When enabled, empty workspaces left behind after moving a window back will be automatically removed.</description>
+      <description>When enabled, empty workspaces left behind after moving a window back will be automatically removed. Only used with a fixed number of workspaces: with dynamic workspaces GNOME removes them itself.</description>
     </key>
   </schema>
 </schemalist>
