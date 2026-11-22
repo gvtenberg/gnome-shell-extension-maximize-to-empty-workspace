@@ -24,6 +24,14 @@ const _handles = [];
 const _windowids_maximized = {};
 const _windowids_size_change = {};
 
+// Ignore the desktop icons window (DING / Desktop Icons NG): it reports itself as maximized, and moving it
+// to another workspace made DING restart (dock and icons disappeared, workspaces were created) and could
+// crash GNOME Shell (assert_workspace_empty).
+function isDesktopIconsWindow(w) {
+    return !!w.customJS_ding || (w.get_gtk_application_id?.() ?? '').startsWith('com.rastersoft.ding') ||
+        (w.get_wm_class() ?? '').startsWith('com.rastersoft.ding') || (w.get_title() ?? '').includes('@!');
+}
+
 export default class MaximizeToEmptyWorkspaceExtension extends Extension {
     
     // First free workspace on the specified monitor
@@ -31,7 +39,7 @@ export default class MaximizeToEmptyWorkspaceExtension extends Extension {
         const n = manager.get_n_workspaces();
         for (let i = 0; i < n; i++) 
         {
-            let win_count = manager.get_workspace_by_index(i).list_windows().filter(w => !w.is_always_on_all_workspaces() && w.get_monitor()==mMonitor).length;
+            let win_count = manager.get_workspace_by_index(i).list_windows().filter(w => !w.is_always_on_all_workspaces() && !isDesktopIconsWindow(w) && w.get_monitor()==mMonitor).length;
             if (win_count < 1) 
                 return i; 
         }
@@ -46,7 +54,7 @@ export default class MaximizeToEmptyWorkspaceExtension extends Extension {
         // Reorder the workspaces and move all other window
 
         const mMonitor=win.get_monitor();
-        const wList = win.get_workspace().list_windows().filter(w => w!==win && !w.is_always_on_all_workspaces() && w.get_monitor()==mMonitor);
+        const wList = win.get_workspace().list_windows().filter(w => w!==win && !w.is_always_on_all_workspaces() && !isDesktopIconsWindow(w) && w.get_monitor()==mMonitor);
         if (wList.length >= 1) 
             {
             const manager = win.get_display().get_workspace_manager();
@@ -106,8 +114,8 @@ export default class MaximizeToEmptyWorkspaceExtension extends Extension {
                 if (firstfree==-1)
                     return;
                 // show the window on the workspace with the empty monitor
-                const wListcurrent = win.get_workspace().list_windows().filter(w => w!==win && !w.is_always_on_all_workspaces());
-                const wListfirstfree = manager.get_workspace_by_index(firstfree).list_windows().filter(w => w!==win && !w.is_always_on_all_workspaces());
+                const wListcurrent = win.get_workspace().list_windows().filter(w => w!==win && !w.is_always_on_all_workspaces() && !isDesktopIconsWindow(w));
+                const wListfirstfree = manager.get_workspace_by_index(firstfree).list_windows().filter(w => w!==win && !w.is_always_on_all_workspaces() && !isDesktopIconsWindow(w));
                 if (current<firstfree)
                     {
                     manager.reorder_workspace(manager.get_workspace_by_index(firstfree),current);
@@ -158,7 +166,7 @@ export default class MaximizeToEmptyWorkspaceExtension extends Extension {
         if (this._settings.get_boolean('cleanup-empty-workspace')) {
             // Exclude the window we just moved
             const remaining = oldWorkspace.list_windows().filter(
-                w => w !== win && !w.is_always_on_all_workspaces()
+                w => w !== win && !w.is_always_on_all_workspaces() && !isDesktopIconsWindow(w)
             );
             if (remaining.length === 0) {
                 const oldIndex = oldWorkspace.index();
@@ -175,6 +183,8 @@ export default class MaximizeToEmptyWorkspaceExtension extends Extension {
     window_manager_map(act)
     {
         const win = act.meta_window;
+        if (isDesktopIconsWindow(win))
+            return;
         //console.log("achim","window_manager_map "+win.get_id());
         if (win.window_type !== Meta.WindowType.NORMAL)
             return;
@@ -188,6 +198,8 @@ export default class MaximizeToEmptyWorkspaceExtension extends Extension {
     window_manager_destroy(act)
     {
         const win = act.meta_window;
+        if (isDesktopIconsWindow(win))
+            return;
         //console.log("achim","window_manager_destroy");
         if (win.window_type !== Meta.WindowType.NORMAL)
             return;
@@ -197,6 +209,8 @@ export default class MaximizeToEmptyWorkspaceExtension extends Extension {
     window_manager_size_change(act,change,rectold) 
     {
         const win = act.meta_window;
+        if (isDesktopIconsWindow(win))
+            return;
         //console.log("achim","window_manager_size_change "+win.get_id());
         if (win.window_type !== Meta.WindowType.NORMAL)
             return;
@@ -239,6 +253,8 @@ export default class MaximizeToEmptyWorkspaceExtension extends Extension {
     window_manager_minimize(act)
     {
         const win = act.meta_window;
+        if (isDesktopIconsWindow(win))
+            return;
         //console.log("achim","window_manager_minimize");
         if (win.window_type !== Meta.WindowType.NORMAL)
             return;
@@ -250,6 +266,8 @@ export default class MaximizeToEmptyWorkspaceExtension extends Extension {
     window_manager_unminimize(act)
     {
         const win = act.meta_window;
+        if (isDesktopIconsWindow(win))
+            return;
         //console.log("achim","window_manager_umminimize");
         if (win.window_type !== Meta.WindowType.NORMAL)
             return;
@@ -263,6 +281,8 @@ export default class MaximizeToEmptyWorkspaceExtension extends Extension {
     window_manager_size_changed(act)
     {
         const win = act.meta_window;
+        if (isDesktopIconsWindow(win))
+            return;
         if (win.get_id() in _windowids_size_change) {
             if (_windowids_size_change[win.get_id()]=="place") {                
                 this.placeOnWorkspace(win);
